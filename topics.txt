@@ -1,0 +1,49 @@
+land use and biodiversity,e
+energy use and greenhouse gas emissions,e
+emissions to air,e
+degradation and contamination (land),e
+discharges and releases (water),e
+environmental impact of products,e
+carbon impact of products,e
+water use,e
+discrimination and harassment,s
+forced labour,s
+freedom of association,s
+health and safety,s
+labour relations,s
+other labour standards,s
+child labour,s
+false or deceptive marketing,s
+data privacy and security,s
+services quality and safety,s
+anti-competitive practices,s
+product quality and safety,s
+customer management,s
+conflicts with indigenous communities,s
+conflicts with local communities,s
+water rights,s
+land rights,s
+arms export,s
+controversial weapons,s
+sanctions,s
+involvement with entities violating human rights,s
+occupied territories/disputed regions,s
+social impact of products,s
+media ethics,s
+access to basic services,s
+employees - other human rights violations,s
+society - other human rights violations,s
+local community - other,g
+taxes avoidance/evasion,g
+accounting irregularities and accounting fraud,g
+lobbying and public policy,g
+insider trading,g
+bribery and corruption,g
+remuneration,g
+shareholder disputes/rights,g
+board composition,g
+corporate governance - other,g
+intellectual property,g
+animal welfare,g
+resilience,g
+business ethics - other,g
