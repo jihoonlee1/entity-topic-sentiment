@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS article_entity(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS article_entity_is_relevnat(
+CREATE TABLE IF NOT EXISTS article_entity_is_relevant(
 	article_url TEXT    NOT NULL,
 	entity      TEXT    NOT NULL,
 	is_relevant INTEGER NOT NULL,
@@ -60,10 +60,11 @@ CREATE TABLE IF NOT EXISTS article_entity_is_relevnat(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS Sarticle_entity_topic(
+CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
 	article_url INTEGER NOT NULL,
 	entity      TEXT    NOT NULL,
 	topic_id    INTEGER NOT NULL,
+	sentiment   INTEGER NOT NULL,
 	PRIMARY KEY(article_url, entity, topic_id)
 )
 """
