@@ -1,13 +1,13 @@
-import torch
 import database
+import random
+import torch
 import transformers
-
 
 transformers.logging.set_verbosity_error()
 device = torch.device("cuda:0")
 additional_special_tokens = ["[ENT]", "[TPO]"]
 base_model = "bert-base-uncased"
-num_classes = 2
+num_classes = 49
 model = transformers.BertForSequenceClassification.from_pretrained(base_model, num_labels=num_classes).to(device)
 tokenizer = transformers.BertTokenizer.from_pretrained(base_model)
 tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
@@ -20,37 +20,51 @@ def _raw_dataset():
 	with database.connect() as con:
 		dataset = []
 		cur = con.cursor()
-		cur.execute("SELECT * FROM article_entity_is_relevant")
-		for article_url, entity, is_relevant in cur.fetchall():
+		cur.execute("SELECT DISTINCT article_url FROM article_entity_topic_sentiment")
+		for article_url, in cur.fetchall():
 			cur.execute("SELECT content FROM articles WHERE url = ?", (article_url, ))
 			content, = cur.fetchone()
 			content = content[:2000]
-			cur.execute("SELECT start_pos, end_pos FROM article_entity WHERE article_url = ? AND entity = ?", (article_url, entity))
-			start_pos, end_pos = cur.fetchone()
-			if content[start_pos:end_pos] != entity:
-				continue
-			label = [0, 0]
-			if is_relevant == 0:
-				label[1] = 1
-			elif is_relevant == 1:
-				label[0] = 1
-			content_replaced = content[:start_pos] + "[ENT] " + entity + " [ENT]" + content[end_pos:]
-			dataset.append((content_replaced, label))
+			cur.execute("SELECT DISTINCT entity FROM article_entity_topic_sentiment WHERE article_url = ?", (article_url, ))
+			for entity, in cur.fetchall():
+				cur.execute("SELECT start_pos, end_pos FROM article_entity WHERE article_url = ? AND entity = ?", (article_url, entity))
+				start_pos, end_pos = cur.fetchone()
+				if content[start_pos:end_pos] != entity:
+					continue
+				content_replaced = content[:start_pos] + "[ENT] " + entity + " [ENT]" + content[end_pos:]
+				label = [0 for _ in range(num_classes)]
+				cur.execute("SELECT topic_id FROM article_entity_topic_sentiment WHERE article_url = ? AND entity = ?", (article_url, entity))
+				for topic_id, in cur.fetchall():
+					label[topic_id] = 1
+				dataset.append((content_replaced, label))
+		random.shuffle(dataset)
 		return dataset
 
 
 def _weight():
 	with database.connect() as con:
+		weight = [0 for _ in range(num_classes)]
+		num_total_samples = 0
 		cur = con.cursor()
-		cur.execute("SELECT count(*) FROM article_entity_is_relevant")
-		num_total_samples, = cur.fetchone()
-		cur.execute("SELECT count(*) FROM article_entity_is_relevant WHERE is_relevant = ?", (1, ))
-		yes_relevant_samples, = cur.fetchone()
-		cur.execute("SELECT count(*) FROM article_entity_is_relevant WHERE is_relevant = ?", (0, ))
-		no_relevant_samples, = cur.fetchone()
-		yes_weight = num_total_samples / (yes_relevant_samples * num_classes)
-		no_weight = num_total_samples / (no_relevant_samples * num_classes)
-		return torch.FloatTensor([yes_weight, no_weight])
+		cur.execute("SELECT DISTINCT article_url FROM article_entity_topic_sentiment")
+		for article_url, in cur.fetchall():
+			cur.execute("SELECT content FROM articles WHERE url = ?", (article_url, ))
+			content, = cur.fetchone()
+			content = content[:2000]
+			cur.execute("SELECT DISTINCT entity FROM article_entity_topic_sentiment WHERE article_url = ?", (article_url, ))
+			for entity, in cur.fetchall():
+				cur.execute("SELECT start_pos, end_pos FROM article_entity WHERE article_url = ? AND entity = ?", (article_url, entity))
+				start_pos, end_pos = cur.fetchone()
+				if content[start_pos:end_pos] != entity:
+					continue
+				num_total_samples = num_total_samples + 1
+		cur.execute("SELECT id FROM topics")
+		for topic_id, in cur.fetchall():
+			cur.execute("SELECT count(*) FROM article_entity_topic_sentiment WHERE topic_id = ?", (topic_id, ))
+			topic_sample_count, = cur.fetchone()
+			topic_weight = num_total_samples / (topic_sample_count * num_classes)
+			weight[topic_id] = topic_weight
+		return torch.FloatTensor(weight)
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -87,9 +101,9 @@ def _train(epoch, dataloader, loss_function):
 			param.grad = None
 		print(f"{index}/{num_batches} {loss_item}")
 	avg_loss = total_loss / num_batches
-	with open("is_relevant/output.txt", "a") as f:
+	with open("topics/output.txt", "a") as f:
 		f.write(f"train epoch{epoch} avg_loss: {avg_loss}\n")
-	torch.save(model.state_dict(), f"is_relevant/{epoch}.model")
+	torch.save(model.state_dict(), f"topics/{epoch}.model")
 
 
 def _eval(epoch, dataloader, loss_function):
@@ -111,14 +125,14 @@ def _eval(epoch, dataloader, loss_function):
 			print(f"{index}/{num_batches} {loss_item}")
 		avg_loss = total_loss / num_batches
 		accuracy = correct / num_dataset
-		with open("is_relevant/output.txt", "a") as f:
+		with open("topics/output.txt", "a") as f:
 			f.write(f"eval epoch{epoch} avg_loss: {avg_loss} accuracy: {accuracy}\n")
 
 
 def main():
 	raw_dataset = _raw_dataset()
 	weight = _weight()
-	train_eval_split_index = 180000
+	train_eval_split_index = 95000
 	train_raw_dataset = raw_dataset[:train_eval_split_index]
 	eval_raw_dataset = raw_dataset[train_eval_split_index:]
 
@@ -139,35 +153,6 @@ def main():
 	for epoch in range(epochs):
 		_train(epoch, train_dataloader, loss_function)
 		_eval(epoch, eval_dataloader, loss_function)
-
-
-def predict(sentence):
-	import flair
-	model.load_state_dict(torch.load("is_relevant/3.model"))
-	model.eval()
-	tagger = flair.models.SequenceTagger.load("flair/ner-english-fast")
-	sentence_entities = flair.data.Sentence(sentence)
-	tagger.predict(sentence_entities)
-	tags = ["PER", "LOC", "ORG"]
-	entities = []
-	batches = []
-	for entity in sentence_entities.get_spans("ner"):
-		tag = entity.tag
-		entity_name = str(entity.text)
-		entity_score = entity.score
-		start_pos = entity.start_position
-		end_pos = entity.end_position
-		if tag in tags and entity_score >= 0.95 and entity_name not in entities:
-			entities.append(entity_name)
-			sentence_replaced = sentence[:start_pos] + "[ENT] " + entity_name + " [ENT]" + sentence[end_pos:]
-			batches.append(sentence_replaced)
-	encoding = tokenizer(batches, truncation=True, max_length=512, padding="max_length", return_tensors="pt")
-	prediction = model(**encoding.to(device)).logits
-	prediction = torch.sigmoid(prediction).tolist()
-	result = []
-	for i in range(len(prediction)):
-		result.append((batches[i], prediction[i]))
-	return result
 
 
 if __name__ == "__main__":

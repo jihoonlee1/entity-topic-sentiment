@@ -124,24 +124,6 @@ def _eval(epoch, dataloader, loss_function):
 			f.write(f"eval epoch{epoch} avg_loss: {avg_loss} accuracy: {accuracy}\n")
 
 
-def test():
-	import re
-	model.load_state_dict(torch.load("is_esg/0.model"))
-	sentence = """ Charli D’Amelio admits that her relationship with her skin has had its ups and downs.
-
-“While we were filming season two of The D'Amelio Show [premiering Sept. 20], my skin was so irritated and sensitive. As someone who has obsessive-compulsive tendencies, I also picked my skin a lot — that took a while to step back from. I was very insecure,” the viral TikTok dancer turned reality television star and influencer tells PEOPLE exclusively.  
-
-At the time, she even felt “helpless” because, no matter what she did to treat her skin, nothing seemed to work.
-
-“My face was just bright red. It was too painful to put makeup on, but I had to do this big interview that I couldn't miss,” she recalls of grappling with the severity of her skin while filming her family's Hulu series. “I watched the episode back and thought, ‘There's no way this is going on TV.’”
-
-Fast forward to now, and the Dancing with the Stars winner says she “doesn’t feel any type of way” towards her imperfections these days. She's also ready to get real about her skin struggles to encourage others — especially teens who make up a large part of her following — to feel comfortable in their skin.  """
-	sentence = re.sub(r"\n+", " ", sentence).strip()
-	encoding = tokenizer(sentence, max_length=512, truncation=True, padding="max_length", return_tensors="pt")
-	prediction = model(**encoding.to(device)).logits
-	prediction = torch.sigmoid(prediction)
-	print(prediction[0])
-
 
 def main():
 	raw_dataset = _raw_dataset()
@@ -168,5 +150,14 @@ def main():
 		_eval(epoch, eval_dataloader, loss_function)
 
 
+def predict(sentence):
+	model.load_state_dict(torch.load("is_esg/3.model"))
+	model.eval()
+	encoding = tokenizer(sentence, truncation=True, max_length=512, padding="max_length", return_tensors="pt")
+	prediction = model(**encoding.to(device)).logits[0]
+	prediction = torch.sigmoid(prediction).tolist()
+	return prediction
+
+
 if __name__ == "__main__":
-	test()
+	main()
