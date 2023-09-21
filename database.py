@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS articles(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS question_answer0(
+CREATE TABLE IF NOT EXISTS qa0(
 	article_url TEXT NOT NULL PRIMARY KEY,
 	response    TEXT NOT NULL
 )
@@ -35,11 +35,16 @@ CREATE TABLE IF NOT EXISTS article_is_esg(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS question_answer1(
-	article_url TEXT NOT NULL,
-	entity      TEXT NOT NULL,
-	response    TEXT NOT NULL,
-	PRIMARY KEY(article_url, entity)
+CREATE TABLE IF NOT EXISTS qa1(
+	article_url TEXT NOT NULL PRIMARY KEY,
+	response    TEXT NOT NULL
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS article_topic(
+	article_url TEXT    NOT NULL,
+	topic_id    INTEGER NOT NULL,
+	PRIMARY KEY(article_url, topic_id)
 )
 """,
 """
@@ -52,19 +57,18 @@ CREATE TABLE IF NOT EXISTS article_entity(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS article_entity_is_relevant(
-	article_url TEXT    NOT NULL,
-	entity      TEXT    NOT NULL,
-	is_relevant INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS qa2(
+	article_url TEXT NOT NULL,
+	entity      TEXT NOT NULL,
+	response    TEXT NOT NULL,
 	PRIMARY KEY(article_url, entity)
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
-	article_url INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS article_entity_topic(
+	article_url TEXT    NOT NULL,
 	entity      TEXT    NOT NULL,
 	topic_id    INTEGER NOT NULL,
-	sentiment   INTEGER NOT NULL,
 	PRIMARY KEY(article_url, entity, topic_id)
 )
 """
