@@ -89,7 +89,7 @@ def scrap_page(source_id, source_url, input_queue, visited, output_queue):
 
 def open_website(source_id, source_url, output_queue):
 	try:
-		num_worker_per_website = 2
+		num_worker_per_website = 3
 		input_queue = queue.Queue()
 		raw_html = _raw_html(source_url)
 		soup = bs4.BeautifulSoup(raw_html, "html.parser")
