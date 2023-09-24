@@ -10,12 +10,14 @@ tagger = flair.models.SequenceTagger.load("flair/ner-english-fast")
 
 with database.connect() as con:
 	cur = con.cursor()
-	cur.execute("SELECT url, content FROM articles")
+	cur.execute("SELECT DISTINCT article_url FROM article_url WHERE topic_id != ? AND article_url NOT IN (SELECT article_url FROM article_entity)", (-1,))
 	articles = cur.fetchall()
 	num_articles = len(articles)
-	for idx, (url, content) in enumerate(articles):
-		content = content[:2500]
+	for idx, (url, ) in enumerate(articles):
 		print(f"{idx}/{num_articles}")
+		cur.execute("SELECT content FROM articles WHERE url = ?", (url, ))
+		content, = cur.fetchone()
+		content = content[:2500]
 		sentence = flair.data.Sentence(content)
 		tagger.predict(sentence)
 		for entity in sentence.get_spans("ner"):
