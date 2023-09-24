@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS temp_topics(
 	id INTEGER NOT NULL,
 	article_url TEXT NOT NULL,
 	topic_id INTEGER NOT NULL,
-	PRIMARY KEY(id, article_url)
+	PRIMARY KEY(id, article_url, topic_id)
 )
 """
 ]
