@@ -22,4 +22,3 @@ def _dataset():
 			elif topic_id != -1:
 				dataset.append([content, 0])
 		return dataset
-
