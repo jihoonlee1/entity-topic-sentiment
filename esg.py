@@ -116,7 +116,7 @@ def train():
 def test():
 	model.eval()
 	for epoch in range(epochs):
-		cp = torch.load(f"{epoch}.model")
+		cp = torch.load(f"esg/{epoch}.model")
 		model.load_state_dict(cp["model_state_dict"])
 		train_avg_loss = cp["train_avg_loss"]
 		eval_avg_loss = cp["eval_avg_loss"]

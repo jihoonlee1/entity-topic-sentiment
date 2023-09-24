@@ -23,9 +23,8 @@ with database.connect() as con:
 		for entity in sentence.get_spans("ner"):
 			tag = entity.tag
 			text = str(entity.text)
-			score = entity.score
 			start_pos = entity.start_position
 			end_pos = entity.end_position
-			if tag in ["ORG", "PER", "LOC"] and score >= 0.95:
+			if tag in ["ORG", "PER", "LOC"]:
 				cur.execute("INSERT OR IGNORE INTO article_entity VALUES(?,?,?,?)", (url, text, start_pos, end_pos))
 				con.commit()
