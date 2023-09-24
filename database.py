@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
 	sentiment INTEGER NOT NULL,
 	PRIMARY KEY(article_url, entity, topic_id)
 )
+""",
+"""
+CREATE TABLE IF NOT EXISTS temp(
+	article_url TEXT NOT NULL,
+	entity TEXT NOT NULL,
+	response TEXT NOT NULL,
+	PRIMARY KEY(article_url, entity)
+)
 """
 ]
 
