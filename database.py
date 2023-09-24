@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS temp(
 	response TEXT NOT NULL,
 	PRIMARY KEY(article_url, entity)
 )
+""",
+"""
+CREATE TABLE IF NOT EXISTS temp_topics(
+	id INTEGER NOT NULL,
+	article_url TEXT NOT NULL,
+	topic_id INTEGER NOT NULL,
+	PRIMARY KEY(id, article_url)
+)
 """
 ]
 
