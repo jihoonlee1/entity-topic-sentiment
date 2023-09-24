@@ -30,9 +30,28 @@ CREATE TABLE IF NOT EXISTS article_q0_done(
 """
 CREATE TABLE IF NOT EXISTS article_topic(
 	article_url TEXT NOT NULL,
-	topic_id INTEGER NOT NULL
+	topic_id INTEGER NOT NULL,
+	PRIMARY KEY(article_url, topic_id)
 )
 """,
+"""
+CREATE TABLE IF NOT EXISTS article_entity(
+	article_url TEXT NOT NULL,
+	entity TEXT NOT NULL,
+	start_pos INTEGER NOT NULL,
+	end_pos INTEGER NOT NULL,
+	PRIMARY KEY(article_url, entity)
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
+	article_url TEXT NOT NULL,
+	entity TEXT NOT NULL,
+	topic_id INTEGER NOT NULL,
+	sentiment INTEGER NOT NULL,
+	PRIMARY KEY(article_url, entity, topic_id)
+)
+"""
 ]
 
 

@@ -41,18 +41,17 @@ def ask(input_queue, output_queue):
 Sentence:
 {content}
 
-ESG factors:
+ESG Factors:
 [land use and biodiversity, energy use and greenhouse gas emissions, emissions to air, degradation and contamination (land), discharges and releases (water), environmental impact of products, carbon impact of products, water use, discrimination and harassment, forced labour, freedom of association, health and safety, labour relations, other labour standards, child labour, false or deceptive marketing, data privacy and security, services quality and safety, anti-competitive practices, product quality and safety, customer management, conflicts with indigenous communities, conflicts with local communities, water rights, land rights, arms export, controversial weapons, sanctions, involvement with entities violating human rights, occupied territories/disputed regions, social impact of products, media ethics, access to basic services, employees - other human rights violations, society - other human rights violations, local community - other, taxes avoidance/evasion, accounting irregularities and accounting fraud, lobbying and public policy, insider trading, bribery and corruption, remuneration, shareholder disputes/rights, board composition, corporate governance - other, intellectual property, animal welfare, resilience, business ethics - other]
 
 Task:
-Which given ESG (Environmental, Social, Governance) factors does the given sentence explicitly talk about? If the given sentence does not explicitly talk about any of given ESG factors that can impact entities such as business, organization, people, or locations, just say [[n/a]]. Else, give me the list of chosen ESG factors in this format: [[factor1, factor2,...]]
+Does the given sentence explicitly state any of given ESG factors that can impact entities such as business, organization, companies, people, or location? If no, say [[n/a]]. If yes, output the chosen ESG factors from the given list in this format: [[factor1, factor2...]]
 """
 		try:
 			conv = bingchat.conversation()
 			response = bingchat.ask(question, conv)
 			output_queue.put((url, response))
-		except Exception as e:
-			print(e)
+		except Exception:
 			input_queue.put((url, content))
 			continue
 
@@ -63,7 +62,7 @@ def main():
 		cur = con.cursor()
 		cur.execute("SELECT url, content FROM articles WHERE url NOT IN (SELECT article_url FROM article_q0_done)")
 		for url, content in cur.fetchall():
-			content = content[:500]
+			content = content[:2300]
 			temp.append((url, content))
 	num_questions = len(temp)
 
@@ -73,7 +72,7 @@ def main():
 		input_queue.put((url, content))
 
 	ask_threads = []
-	num_workers = 100
+	num_workers = 400
 	for _ in range(num_workers):
 		t = threading.Thread(target=ask, args=(input_queue, output_queue))
 		t.start()
