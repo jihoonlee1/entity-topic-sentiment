@@ -10,7 +10,7 @@ tagger = flair.models.SequenceTagger.load("flair/ner-english-fast")
 
 with database.connect() as con:
 	cur = con.cursor()
-	cur.execute("SELECT DISTINCT article_url FROM article_url WHERE topic_id != ? AND article_url NOT IN (SELECT article_url FROM article_entity)", (-1,))
+	cur.execute("SELECT DISTINCT article_url FROM article_topic WHERE topic_id != ? AND article_url NOT IN (SELECT article_url FROM article_entity)", (-1,))
 	articles = cur.fetchall()
 	num_articles = len(articles)
 	for idx, (url, ) in enumerate(articles):
