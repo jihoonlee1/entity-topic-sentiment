@@ -60,6 +60,7 @@ class Dataset(torch.utils.data.Dataset):
 
 
 def train():
+	model.train()
 	dataset = _dataset()
 	train_eval_split = len(dataset) - int((len(dataset) * 0.1))
 	train_dataset = dataset[:train_eval_split]
@@ -115,21 +116,30 @@ def train():
 
 def test():
 	model.eval()
-	for epoch in range(epochs):
-		cp = torch.load(f"esg/{epoch}.model")
-		model.load_state_dict(cp["model_state_dict"])
-		train_avg_loss = cp["train_avg_loss"]
-		eval_avg_loss = cp["eval_avg_loss"]
-		eval_accuracy = cp["eval_accuracy"]
-		sent0 = "Charli D'Amelio and Emma Watson proved they had legs for days at Milan Fashion Week. The social media star and Harry Potter talent were spotted out on the town for one of Milan’s most notable events — Fashion Week. Both ladies made appearances for Prada’s Spring/Summer 2024 Fashion Show. Watson, 33, and D'Amelio, 19, both had one thing in common as they arrived at Prada events in the city — outfits that highlighted their legs!"
-		sent1 = "Reuters: Apple has been putting lots of effort in order to decrease air pollution from growing lots of trees. Microsoft has been putting lots of air emission from their laptop manufacturing. Microsoft has been charged with child labour in china back in 2013."
-		encoding = tokenizer([sent0, sent1], max_length=token_max_length, truncation=True, padding="max_length", return_tensors="pt")
-		input_ids = encoding["input_ids"].to(device)
-		token_type_ids = encoding["token_type_ids"].to(device)
-		attention_mask = encoding["attention_mask"].to(device)
-		pred = model(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask).logits[0]
-		pred = torch.sigmoid(pred).tolist()
-		print(pred)
+	with torch.no_grad():
+		for epoch in range(epochs):
+			cp = torch.load(f"esg/{epoch}.model")
+			model.load_state_dict(cp["model_state_dict"])
+			train_avg_loss = cp["train_avg_loss"]
+			eval_avg_loss = cp["eval_avg_loss"]
+			eval_accuracy = cp["eval_accuracy"]
+			sent0 = "Charli D'Amelio and Emma Watson proved they had legs for days at Milan Fashion Week. The social media star and Harry Potter talent were spotted out on the town for one of Milan’s most notable events — Fashion Week. Both ladies made appearances for Prada’s Spring/Summer 2024 Fashion Show. Watson, 33, and D'Amelio, 19, both had one thing in common as they arrived at Prada events in the city — outfits that highlighted their legs!"
+			sent1 = "In the days that followed the devastating floods in the Libyan city of Derna, reports emerged of survival – a six-year-old boy plucked from the water from a third-floor balcony, a father saving his daughter by putting her in the fridge, an infant found alive floating in the water. Such stories are impossible to verify but are a glimmer of hope people want to cling to.  Torrential rainfall and the collapse of two dams flooded the coastal city, sweeping entire neighborhoods into the Mediterranean on September 10. Close to 4,000 people died in the floods and 9,000 more are still unaccounted for, according to the World Health Organization. While the missing are presumed dead, their bodies still trapped under debris or in the sea, many still hope their loved ones could still be alive."
+			sent2 = "The iPhone 15 Pro Max and Apple Watch Ultra 2 both went on sale Friday, and I’ve got a bunch of first impressions. Also: Amazon’s hardware division gets back to basics with a practical set of new products, and Apple store employees receive smaller raises than last year."
+			sent3 = "NEW YORK/GENEVA, 10 June 2021 – The number of children in child labour has risen to 160 million worldwide – an increase of 8.4 million children in the last four years – with millions more at risk due to the impacts of COVID-19, according to a new report by the International Labour Organization (ILO) and UNICEF. Child Labour: Global estimates 2020, trends and the road forward – released ahead of World Day Against Child Labour on 12th June – warns that progress to end child labour has stalled for the first time in 20 years, reversing the previous downward trend that saw child labour fall by 94 million between 2000 and 2016."
+			encoding = tokenizer(sent0, max_length=token_max_length, truncation=True, padding="max_length", return_tensors="pt")
+			input_ids = encoding["input_ids"].to(device)
+			token_type_ids = encoding["token_type_ids"].to(device)
+			attention_mask = encoding["attention_mask"].to(device)
+			pred = model(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask).logits[0]
+			pred = torch.sigmoid(pred).tolist()
+			print(f"epoch{epoch}")
+			print(f"train_avg_loss: {train_avg_loss}")
+			print(f"eval_avg_loss: {eval_avg_loss}")
+			print(f"eval_accuracy: {eval_accuracy}")
+			print("")
+			print(pred)
+			print("----------")
 
 
 if __name__ == "__main__":
