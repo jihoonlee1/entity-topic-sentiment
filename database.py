@@ -23,11 +23,6 @@ CREATE TABLE IF NOT EXISTS sources(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS article_q0_done(
-	article_url TEXT NOT NULL PRIMARY KEY
-)
-""",
-"""
 CREATE TABLE IF NOT EXISTS article_topic(
 	article_url TEXT NOT NULL,
 	topic_id INTEGER NOT NULL,
@@ -50,14 +45,6 @@ CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
 	topic_id INTEGER NOT NULL,
 	sentiment INTEGER NOT NULL,
 	PRIMARY KEY(article_url, entity, topic_id)
-)
-""",
-"""
-CREATE TABLE IF NOT EXISTS temp(
-	article_url TEXT NOT NULL,
-	entity TEXT NOT NULL,
-	response TEXT NOT NULL,
-	PRIMARY KEY(article_url, entity)
 )
 """,
 """
