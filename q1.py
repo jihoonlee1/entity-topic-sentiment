@@ -26,7 +26,7 @@ Sentence: "{content}"
 
 ESG factors: {topics}
 
-Task: Does the given sentence explicitly state the relationship between {entity_name} and any of the given ESG factors? For example, does {entity_name} have a direct impact on any of the given ESG factors in the given sentence? Or does any of given ESG factors have a direct impact on {entity_name} in the given sentence? If no, say [[n/a]]. If yes, for each relevant relationship, identify the tone of the relationship, whether it's positive, negative, or neutral. For examples, if {entity_name} is doing something good to eliminate forced labour, you would say <<forced labour, positive>>, if {entity_name} is being impacted by forced labour in a negative way, you would say <<forced labour, negative>>. Format the output this way: [[<<topic1, tone>>, <<topic2, tone>>,...]]"""
+Task: Does the given sentence state the relationship between {entity_name} and any of the given ESG factors? For example, does {entity_name} have a impact on any of the given ESG factors in the given sentence? Or does any of given ESG factors have an impact on {entity_name} in the given sentence? If no, say [[n/a]]. If yes, for each relevant relationship, identify the tone of the relationship, whether it's positive, negative, or neutral. For examples, if {entity_name} is doing something good to eliminate forced labour, you would say <<forced labour, positive>>, if {entity_name} is being impacted by forced labour in a negative way, you would say <<forced labour, negative>>. Format the output this way: [[<<topic1, tone>>, <<topic2, tone>>,...]]"""
 		try:
 			conv = bingchat.conversation()
 			response = bingchat.ask(question, conv)
@@ -72,7 +72,7 @@ def main():
 		input_queue.put((url, content, topics, entity_name))
 
 	ask_threads = []
-	num_workers = 200
+	num_workers = 400
 	for _ in range(num_workers):
 		t = threading.Thread(target=ask, args=(input_queue, output_queue))
 		t.start()

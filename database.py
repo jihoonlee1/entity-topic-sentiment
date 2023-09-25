@@ -70,7 +70,6 @@ CREATE TABLE IF NOT EXISTS temp_topics(
 """
 ]
 
-
 def connect(database="database.sqlite", mode="rw"):
 	return contextlib.closing(sqlite3.connect(f"file:{database}?mode={mode}", uri=True))
 
