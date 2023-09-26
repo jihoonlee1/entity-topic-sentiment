@@ -6,7 +6,7 @@ import numpy
 
 
 device = torch.device("cuda:0")
-num_labels = 2
+num_labels = 3
 batch_size = 4
 token_max_length = 512
 epochs = 10
@@ -14,35 +14,47 @@ tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
 additional_special_tokens = ["[ENT]", "[TPO]"]
 tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
 model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
+model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
 
 
 def _dataset():
 	with database.connect() as con:
-		cur = con.cursor()
 		dataset = []
-		num_yes_esg = 0
-		num_no_esg = 0
-		cur.execute("SELECT DISTINCT article_url FROM article_topic")
+		sentiment_count_each = [0, 0, 0]
+		cur = con.cursor()
+		cur.execute("SELECT DISTINCT article_url FROM article_entity_topic_sentiment WHERE topic_id != ?", (-1, ))
 		for url, in cur.fetchall():
 			cur.execute("SELECT content FROM articles WHERE url = ?", (url, ))
 			content, = cur.fetchone()
 			content = content[:2500]
-			cur.execute("SELECT topic_id FROM article_topic WHERE article_url = ? LIMIT 1", (url, ))
-			topic_id, = cur.fetchone()
-			if topic_id == -1:
-				dataset.append((content, 1))
-				num_no_esg = num_no_esg + 1
-			elif topic_id != -1:
-				dataset.append((content, 0))
-				num_yes_esg = num_yes_esg + 1
+			cur.execute("SELECT DISTINCT entity FROM article_entity_topic_sentiment WHERE article_url = ? AND topic_id != ?", (url, -1))
+			for entity, in cur.fetchall():
+				cur.execute("SELECT start_pos, end_pos FROM article_entity WHERE article_url = ? AND entity = ?", (url, entity))
+				start_pos, end_pos = cur.fetchone()
+				cur.execute("SELECT topic_id, sentiment FROM article_entity_topic_sentiment WHERE article_url = ? AND entity = ?", (url, entity))
+				for topic_id, sentiment in cur.fetchall():
+					cur.execute("SELECT name FROM topics WHERE id = ?", (topic_id, ))
+					topic_name, = cur.fetchone()
+					if content[start_pos:end_pos] == entity:
+						content_replaced = f"[TPO] {topic_name} [TPO] " + content[:start_pos] + f"[ENT] {entity} [ENT]" + content[end_pos:]
+						dataset.append((content_replaced, sentiment))
+						sentiment_count_each[sentiment] = sentiment_count_each[sentiment] + 1
+					else:
+						if entity in content:
+							content_replaced = f"[TPO] {topic_name} [TPO] " + content
+							content_replaced = content_replaced.replace(entity, f"[ENT] {entity} [ENT]", 1)
+							dataset.append((content_replaced, sentiment))
+							sentiment_count_each[sentiment] = sentiment_count_each[sentiment] + 1
 		random.shuffle(dataset)
-		return (dataset, len(dataset), num_yes_esg, num_no_esg)
+		return (dataset, len(dataset), sentiment_count_each)
 
 
-def _weight(num_dataset, num_yes_esg, num_no_esg):
-	weight_yes_esg = num_dataset / (num_yes_esg * num_labels)
-	weight_no_esg = num_dataset / (num_no_esg * num_labels)
-	return torch.FloatTensor([weight_yes_esg, weight_no_esg])
+def _weight(num_dataset, sentiment_count_each):
+	pos, neg, neu = sentiment_count_each
+	weight_pos = num_dataset / (pos * num_labels)
+	weight_neg = num_dataset / (neg * num_labels)
+	weight_neu = num_dataset / (neu * num_labels)
+	return torch.FloatTensor([weight_pos, weight_neg, weight_neu])
 
 
 def _one_hot(index):
@@ -65,10 +77,10 @@ class Dataset(torch.utils.data.Dataset):
 
 
 def train():
-	dataset, num_dataset, num_yes_esg, num_no_esg = _dataset()
-	weight = _weight(num_dataset, num_yes_esg, num_no_esg)
+	dataset, num_dataset, sentiment_count_each = _dataset()
+	weight = _weight(num_dataset, sentiment_count_each)
 	train_eval_split = num_dataset - int(num_dataset * 0.1)
-	loss_fn = torch.nn.BCEWithLogitsLoss(weight=weight).to(device)
+	loss_fn = torch.nn.CrossEntropyLoss(weight=weight).to(device)
 	optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
 
 	train_dataloader = torch.utils.data.DataLoader(Dataset(dataset[:train_eval_split]), batch_size=batch_size, shuffle=True)
@@ -118,7 +130,7 @@ def train():
 				"train_avg_loss": train_avg_loss,
 				"eval_avg_loss": eval_avg_loss,
 				"eval_accuracy": eval_accuracy
-			}, f"esg/{epoch}.model")
+			}, f"sentiment/{epoch}.model")
 
 
 if __name__ == "__main__":
