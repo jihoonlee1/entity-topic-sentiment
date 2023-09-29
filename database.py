@@ -4,58 +4,48 @@ import sqlite3
 
 statements = [
 """
-CREATE TABLE IF NOT EXISTS articles(
-	url TEXT NOT NULL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS topics(
+	id INTEGER NOT NULL PRIMARY KEY,
+	name TEXT NOT NULL,
+	description TEXT NOT NULL
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS entities(
+	id INTEGER NOT NULL PRIMARY KEY,
+	name TEXT NOT NULL,
+	tag TEXT NOT NULL
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS temp(
+	topic_name TEXT NOT NULL,
+	entity_name TEXT NOT NULL,
+	sentiment TEXT NOT NULL,
+	response TEXT NOT NULL,
+	PRIMARY KEY(topic_name, entity_name, sentiment)
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS sentences(
+	id INTEGER NOT NULL PRIMARY KEY,
+	topic_id INTEGER NOT NULL,
+	entity_id INTEGER NOT NULL,
+	sentiment INTEGER NOT NULL,
 	content TEXT NOT NULL
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS topics(
-	id INTEGER NOT NULL PRIMARY KEY,
-	name TEXT NOT NULL,
-	category TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS train(
+	content TEXT NOT NULL,
+	label TEXT NOT NULL
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS sources(
-	id INTEGER NOT NULL PRIMARY KEY,
-	url TEXT NOT NULL
-)
-""",
-"""
-CREATE TABLE IF NOT EXISTS article_topic(
-	article_url TEXT NOT NULL,
-	topic_id INTEGER NOT NULL,
-	PRIMARY KEY(article_url, topic_id)
-)
-""",
-"""
-CREATE TABLE IF NOT EXISTS article_entity(
-	article_url TEXT NOT NULL,
-	entity TEXT NOT NULL,
-	start_pos INTEGER NOT NULL,
-	end_pos INTEGER NOT NULL,
-	PRIMARY KEY(article_url, entity)
-)
-""",
-"""
-CREATE TABLE IF NOT EXISTS article_entity_topic_sentiment(
-	article_url TEXT NOT NULL,
-	entity TEXT NOT NULL,
-	topic_id INTEGER NOT NULL,
-	sentiment INTEGER NOT NULL,
-	PRIMARY KEY(article_url, entity, topic_id)
-)
-""",
-"""
-CREATE TABLE IF NOT EXISTS temp_topics(
-	id INTEGER NOT NULL,
-	article_url TEXT NOT NULL,
-	topic_id INTEGER NOT NULL,
-	PRIMARY KEY(id, article_url, topic_id)
-)
+CREATE INDEX IF NOT EXISTS sentences_index0 ON sentences(entity_id, topic_id)
 """
 ]
+
 
 def connect(database="database.sqlite", mode="rw"):
 	return contextlib.closing(sqlite3.connect(f"file:{database}?mode={mode}", uri=True))
@@ -66,27 +56,45 @@ def main():
 		cur = con.cursor()
 		for st in statements:
 			cur.execute(st)
-		with open("sources.txt") as f:
-			lines = f.readlines()
-			for r in lines:
-				r = r.strip()
-				cur.execute("SELECT 1 FROM sources WHERE url = ?", (r, ))
-				if cur.fetchone() is None:
-					cur.execute("SELECT ifnull(max(id)+1, 0) FROM sources")
-					source_id, = cur.fetchone()
-					cur.execute("INSERT INTO sources VALUES(?,?)", (source_id, r))
 		with open("topics.txt") as f:
 			lines = f.readlines()
-			for r in lines:
-				r = r.strip()
-				name, category = r.split(",")
+			for line in lines:
+				line = line.strip()
+				name, desc = line.split(":", 1)
 				name = name.strip()
-				category = category.strip()
+				desc = desc.strip()
 				cur.execute("SELECT 1 FROM topics WHERE name = ?", (name, ))
 				if cur.fetchone() is None:
 					cur.execute("SELECT ifnull(max(id)+1, 0) FROM topics")
 					topic_id, = cur.fetchone()
-					cur.execute("INSERT INTO topics VALUES(?,?,?)", (topic_id, name, category))
+					cur.execute("INSERT INTO topics VALUES(?,?,?)", (topic_id, name, desc))
+		with open("companies.txt") as f:
+			lines = f.readlines()
+			for line in lines:
+				line = line.strip()
+				cur.execute("SELECT 1 FROM entities WHERE name = ?", (line, ))
+				if cur.fetchone() is None:
+					cur.execute("SELECT ifnull(max(id)+1, 0) FROM entities")
+					entity_id, = cur.fetchone()
+					cur.execute("INSERT INTO entities VALUES(?,?,?)", (entity_id, line, "ORG"))
+		with open("countries.txt") as f:
+			lines = f.readlines()
+			for line in lines:
+				line = line.strip()
+				cur.execute("SELECT 1 FROM entities WHERE name = ?", (line, ))
+				if cur.fetchone() is None:
+					cur.execute("SELECT ifnull(max(id)+1, 0) FROM entities")
+					entity_id, = cur.fetchone()
+					cur.execute("INSERT INTO entities VALUES(?,?,?)", (entity_id, line, "LOC"))
+		with open("person.txt") as f:
+			lines = f.readlines()
+			for line in lines:
+				line = line.strip()
+				cur.execute("SELECT 1 FROM entities WHERE name = ?", (line, ))
+				if cur.fetchone() is None:
+					cur.execute("SELECT ifnull(max(id)+1, 0) FROM entities")
+					entity_id, = cur.fetchone()
+					cur.execute("INSERT INTO entities VALUES(?,?,?)", (entity_id, line, "PER"))
 		con.commit()
 
 

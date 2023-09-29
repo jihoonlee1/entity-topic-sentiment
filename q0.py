@@ -1,58 +1,37 @@
-import bingchat
 import database
-import threading
 import queue
-import re
+import threading
+import bingchat
+import time
+import random
 
 
 def write(output_queue, num_questions):
+	remaining = num_questions
 	with database.connect() as con:
-		remaining = num_questions
 		cur = con.cursor()
 		while True:
-			url, response = output_queue.get()
-			response = re.sub(r"\n+", " ", response).strip().lower()
-			response = re.findall(r"\[\[(.+?)\]\]", response)
-			if len(response) != 1:
-				continue
-			response = response[0]
-			response = response.strip()
-			if response == "n/a":
-				cur.execute("INSERT OR IGNORE INTO article_topic VALUES(?,?)", (url, -1))
-			else:
-				response = response.split(",")
-				for topic_name in response:
-					topic_name = topic_name.strip()
-					cur.execute("SELECT id FROM topics WHERE name = ?", (topic_name, ))
-					row = cur.fetchone()
-					if row is not None:
-						topic_id, = row
-						cur.execute("INSERT OR IGNORE INTO article_topic VALUES(?,?)", (url, topic_id))
-			cur.execute("INSERT OR IGNORE INTO article_q0_done VALUES(?)", (url, ))
+			topic_name, entity_name, sentiment, response = output_queue.get()
+			cur.execute("INSERT INTO temp VALUES(?,?,?,?)", (topic_name, entity_name, sentiment, response))
 			con.commit()
 			remaining = remaining - 1
 			print(f"{remaining}/{num_questions}")
 
 
 def ask(input_queue, output_queue):
+	time.sleep(random.randint(0, 400))
 	while True:
-		url, content = input_queue.get()
-		question = f"""
-Sentence:
-{content}
+		entity_name, topic_name, topic_desc, sentiment = input_queue.get()
+		question = f"""Topic: {topic_name}
+Topic description: {topic_desc}
 
-ESG Factors:
-[land use and biodiversity, energy use and greenhouse gas emissions, emissions to air, degradation and contamination (land), discharges and releases (water), environmental impact of products, carbon impact of products, water use, discrimination and harassment, forced labour, freedom of association, health and safety, labour relations, other labour standards, child labour, false or deceptive marketing, data privacy and security, services quality and safety, anti-competitive practices, product quality and safety, customer management, conflicts with indigenous communities, conflicts with local communities, water rights, land rights, arms export, controversial weapons, sanctions, involvement with entities violating human rights, occupied territories/disputed regions, social impact of products, media ethics, access to basic services, employees - other human rights violations, society - other human rights violations, local community - other, taxes avoidance/evasion, accounting irregularities and accounting fraud, lobbying and public policy, insider trading, bribery and corruption, remuneration, shareholder disputes/rights, board composition, corporate governance - other, intellectual property, animal welfare, resilience, business ethics - other]
-
-Task:
-Does the given sentence explicitly state any of given ESG factors that can impact entities such as business, organization, companies, people, or location? If no, say [[n/a]]. If yes, output the chosen ESG factors from the given list in this format: [[factor1, factor2...]]
-"""
+Task: Write 5 sentences that describe how {entity_name} has made a {sentiment} impact on the given topic as per given topic definition. Each sentence should mention a different aspect of {entity_name}'s actions or achievements. Each sentence should include the word “{entity_name}”. Use brackets to separate each sentence. For example: [sentence1], [sentence2], [sentence3]…"""
 		try:
 			conv = bingchat.conversation()
 			response = bingchat.ask(question, conv)
-			output_queue.put((url, response))
-		except Exception:
-			input_queue.put((url, content))
+			output_queue.put((topic_name, entity_name, sentiment, response))
+		except:
+			input_queue.put((entity_name, topic_name, topic_desc, sentiment))
 			continue
 
 
@@ -60,32 +39,36 @@ def main():
 	with database.connect() as con:
 		temp = []
 		cur = con.cursor()
-		cur.execute("SELECT url, content FROM articles WHERE url NOT IN (SELECT article_url FROM article_q0_done)")
-		for url, content in cur.fetchall():
-			content = content[:2300]
-			temp.append((url, content))
-	num_questions = len(temp)
+		cur.execute("SELECT name FROM entities")
+		for entity_name, in cur.fetchall():
+			cur.execute("SELECT name, description FROM topics")
+			for topic_name, topic_desc in cur.fetchall():
+				cur.execute("SELECT 1 FROM temp WHERE topic_name = ? AND entity_name = ? AND sentiment = ?", (topic_name, entity_name, "positive"))
+				if cur.fetchone() is None:
+					temp.append((entity_name, topic_name, topic_desc, "positive"))
+				cur.execute("SELECT 1 FROM temp WHERE topic_name = ? AND entity_name = ? AND sentiment = ?", (topic_name, entity_name, "negative"))
+				if cur.fetchone() is None:
+					temp.append((entity_name, topic_name, topic_desc, "negative"))
+		num_questions = len(temp)
+		input_queue = queue.Queue()
+		output_queue = queue.Queue()
+		for entity_name, topic_name, topic_desc, sentiment in temp:
+			input_queue.put((entity_name, topic_name, topic_desc, sentiment))
 
-	input_queue = queue.Queue()
-	output_queue = queue.Queue()
-	for url, content in temp:
-		input_queue.put((url, content))
+		ask_threads = []
+		num_workers = 400
+		for _ in range(num_workers):
+			t = threading.Thread(target=ask, args=(input_queue, output_queue))
+			t.start()
+			ask_threads.append(t)
 
-	ask_threads = []
-	num_workers = 400
-	for _ in range(num_workers):
-		t = threading.Thread(target=ask, args=(input_queue, output_queue))
-		t.start()
-		ask_threads.append(t)
+		write_thread = threading.Thread(target=write, args=(output_queue, num_questions))
+		write_thread.start()
 
-	write_thread = threading.Thread(target=write, args=(output_queue, num_questions))
-	write_thread.start()
+		for t in ask_threads:
+			t.join()
 
-	for t in ask_threads:
-		t.join()
-
-	write_thread.join()
+		write_thread.join()
 
 
-if __name__ == "__main__":
-	main()
+main()

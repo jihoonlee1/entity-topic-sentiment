@@ -1,49 +1,49 @@
-land use and biodiversity,e
-energy use and greenhouse gas emissions,e
-emissions to air,e
-degradation and contamination (land),e
-discharges and releases (water),e
-environmental impact of products,e
-carbon impact of products,e
-water use,e
-discrimination and harassment,s
-forced labour,s
-freedom of association,s
-health and safety,s
-labour relations,s
-other labour standards,s
-child labour,s
-false or deceptive marketing,s
-data privacy and security,s
-services quality and safety,s
-anti-competitive practices,s
-product quality and safety,s
-customer management,s
-conflicts with indigenous communities,s
-conflicts with local communities,s
-water rights,s
-land rights,s
-arms export,s
-controversial weapons,s
-sanctions,s
-involvement with entities violating human rights,s
-occupied territories/disputed regions,s
-social impact of products,s
-media ethics,s
-access to basic services,s
-employees - other human rights violations,s
-society - other human rights violations,s
-local community - other,g
-taxes avoidance/evasion,g
-accounting irregularities and accounting fraud,g
-lobbying and public policy,g
-insider trading,g
-bribery and corruption,g
-remuneration,g
-shareholder disputes/rights,g
-board composition,g
-corporate governance - other,g
-intellectual property,g
-animal welfare,g
-resilience,g
-business ethics - other,g
+Land Use and Biodiversity: Concerns the impact of a company's activities on land ecosystems and biodiversity.
+Energy Use and Greenhouse Gas Emissions: Relates to a company's energy consumption and its contribution to greenhouse gas emissions, which are linked to climate change.
+Emissions to Air: Refers to the release of pollutants and emissions into the atmosphere.
+Degradation and Contamination (Land): Involves the degradation and contamination of land due to industrial activities.
+Discharges and Releases (Water): Focuses on the release of pollutants and chemicals into water bodies.
+Environmental Impact of Products: Examines how a company's products affect the environment.
+Carbon Impact of Products: Specifically assesses the carbon footprint of a company's products.
+Water Use: Addresses the responsible use and management of water resources.
+Discrimination and Harassment: Relates to workplace discrimination and harassment issues.
+Forced Labor: Concerns the use of forced labor within a company's operations or supply chain.
+Freedom of Association: Pertains to the right of employees to form associations or unions.
+Health and Safety: Focuses on workplace health and safety standards and practices.
+Labor Relations: Examines the relationship between the company and its workforce.
+Other Labor Standards: Encompasses compliance with various labor-related standards.
+Child Labor: Addresses the use of child labor in the company's operations or supply chain.
+False or Deceptive Marketing: Relates to misleading advertising or marketing practices.
+Data Privacy and Security: Concerns the protection of customer and employee data.
+Services Quality and Safety: Focuses on the quality and safety of the company's services.
+Anti-Competitive Practices: Deals with unfair competition or monopolistic behavior.
+Product Quality and Safety: Examines the safety and quality of the company's products.
+Customer Management: Relates to customer relations and satisfaction.
+Conflicts with Indigenous Communities: Addresses disputes or conflicts involving indigenous communities.
+Conflicts with Local Communities: Deals with disputes or conflicts involving local communities.
+Water Rights: Concerns the responsible use and allocation of water rights.
+Land Rights: Focuses on respecting land rights, especially in relation to indigenous or local communities.
+Arms Export: Relates to the export of arms and weapons.
+Controversial Weapons: Addresses involvement in the production or sale of controversial weapons.
+Sanctions: Concerns compliance with international sanctions.
+Involvement with Entities Violating Human Rights: Examines business relationships with entities violating human rights.
+Occupied Territories/Disputed Regions: Addresses business operations in disputed or occupied territories.
+Social Impact of Products: Specifically assesses the social impact of a company's products.
+Media Ethics: Relates to ethical standards in media-related activities.
+Access to Basic Services: Focuses on ensuring access to basic services for all.
+Employees - Other Human Rights Violations: Encompasses other human rights violations involving employees.
+Society - Other Human Rights Violations: Encompasses other human rights violations related to society.
+Local Community - Other: Encompasses other issues related to local communities.
+Taxes Avoidance/Evasion: Addresses tax-related practices, including avoidance and evasion.
+Accounting Irregularities and Accounting Fraud: Concerns fraudulent accounting practices.
+Lobbying and Public Policy: Focuses on corporate lobbying and involvement in public policy.
+Insider Trading: Relates to illegal insider trading of company securities.
+Bribery and Corruption: Addresses bribery and corrupt practices.
+Remuneration: Concerns executive compensation and remuneration.
+Shareholder Disputes/Rights: Focuses on shareholder disputes and rights.
+Board Composition: Addresses the composition and diversity of a company's board of directors.
+Corporate Governance - Other: Encompasses other governance-related issues.
+Intellectual Property: Relates to the protection and management of intellectual property rights.
+Animal Welfare: Concerns the treatment of animals in business operations.
+Resilience: Focuses on a company's ability to adapt and withstand challenges.
+Business Ethics - Other: Encompasses other ethical issues related to business conduct.
