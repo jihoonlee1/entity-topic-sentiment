@@ -6,6 +6,7 @@ import torch
 import transformers
 
 
+transformers.logging.set_verbosity_error()
 num_topics = 49
 num_sentiments = 2
 device = torch.device("cuda")
@@ -14,7 +15,11 @@ tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
 additional_special_tokens = ["[ENT]"]
 tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
 model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
-model.resize_token_embeddings(len(tokenizer))
+model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
+optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
+loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
+batch_size = 4
+epochs = 10
 
 
 def _is_balanced(label_count, threshhold):
@@ -28,7 +33,6 @@ def _balance_dataset():
 	random.seed(0) # 770498
 	threshhold = 3500
 	label_count = {}
-	dataset = []
 	for i in range(num_labels):
 		label_count[i] = 0
 	with database.connect() as con:
@@ -118,3 +122,70 @@ class Dataset(torch.utils.data.Dataset):
 		x, y = self.dataset[index]
 		return (x, _label(y))
 
+
+def train():
+	dataset = _dataset()
+	train_eval_split = 100000
+	train_dataloader = torch.utils.data.DataLoader(Dataset(dataset[:train_eval_split]), batch_size=batch_size)
+	eval_dataloader = torch.utils.data.DataLoader(Dataset(dataset[train_eval_split:]), batch_size=batch_size)
+
+	num_train_batches = len(train_dataloader)
+	num_eval_batches = len(eval_dataloader)
+	num_eval_dataset = len(eval_dataloader.dataset)
+
+	for epoch in range(epochs):
+		train_total_loss = 0
+		eval_total_loss = 0
+		eval_correct = 0
+
+		model.train()
+		for idx, (x, y) in enumerate(train_dataloader):
+			encoding = tokenizer(x, max_length=512, truncation=True, padding="max_length", return_tensors="pt")
+			input_ids = encoding["input_ids"].to(device)
+			token_type_ids = encoding["token_type_ids"].to(device)
+			attention_mask = encoding["attention_mask"].to(device)
+			prediction = model(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask).logits
+			loss = loss_fn(prediction, y.to(device))
+			loss.backward()
+			optimizer.step()
+			optimizer.zero_grad()
+			train_total_loss = train_total_loss + loss.item()
+			print(f"{idx}/{num_train_batches} {loss.item()}")
+		train_avg_loss = train_total_loss / num_train_batches
+
+		model.eval()
+		with torch.no_grad():
+			for idx, (x, y) in enumerate(eval_dataloader):
+				encoding = tokenizer(x, max_length=512, truncation=True, padding="max_length", return_tensors="pt")
+				input_ids = encoding["input_ids"].to(device)
+				token_type_ids = encoding["token_type_ids"].to(device)
+				attention_mask = encoding["attention_mask"].to(device)
+				prediction = model(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask).logits
+				loss = loss_fn(prediction, y.to(device))
+				eval_correct = eval_correct + (prediction.argmax(1) == y.argmax(1).to(device)).type(torch.float).sum().item()
+				eval_total_loss = eval_total_loss + loss.item()
+				print(f"{idx}/{num_eval_batches} {loss.item()}")
+			eval_avg_loss = eval_total_loss / num_eval_batches
+			eval_accuracy = eval_correct / num_eval_dataset
+
+			torch.save({
+				"model_state_dict": model.state_dict(),
+				"optimizer_state_dict": optimizer.state_dict(),
+				"train_avg_loss": train_avg_loss,
+				"eval_avg_loss": eval_avg_loss,
+				"eval_accuracy": eval_accuracy
+			}, f"{epoch}.model")
+
+
+def test():
+	for epoch in range(epochs):
+		cp = torch.load(f"{epoch}.model")
+		print(f"train_avg_loss: {cp['train_avg_loss']}")
+		print(f"eval_avg_loss: {cp['eval_avg_loss']}")
+		print(f"eval_accuracy: {cp['eval_accuray']}")
+		print("-------------------------")
+
+
+
+if __name__ == "__main__":
+	train()
