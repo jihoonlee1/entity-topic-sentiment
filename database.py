@@ -36,15 +36,6 @@ CREATE TABLE IF NOT EXISTS sentences(
 )
 """,
 """
-CREATE TABLE IF NOT EXISTS train(
-	content TEXT NOT NULL,
-	label TEXT NOT NULL
-)
-""",
-"""
-CREATE INDEX IF NOT EXISTS sentences_index0 ON sentences(entity_id, topic_id)
-""",
-"""
 CREATE TABLE IF NOT EXISTS sentence_entity(
 	sentence_id INTEGER NOT NULL,
 	entity TEXT NOT NULL,

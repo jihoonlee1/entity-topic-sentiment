@@ -73,9 +73,9 @@ def main():
 
 main()
 
-Topic: Controversial Weapons
-Topic defnition: Addresses involvement in the production or sale of controversial weapons.
+#Topic: Controversial Weapons
+#Topic defnition: Addresses involvement in the production or sale of controversial weapons.
 
-Sentence: According to Sustainalytics, US Foods Holding has a 0.01% exposure to companies with ties to controversial weapons, which violates the principles of distinction and proportionality in international humanitarian law.
+#Sentence: According to Sustainalytics, US Foods Holding has a 0.01% exposure to companies with ties to controversial weapons, which violates the principles of distinction and proportionality in international humanitarian law.
 
-Does the given sentence address that  Sustainalytics has a negative impact towards the given topic as per definition?
+#Does the given sentence address that  Sustainalytics has a negative impact towards the given topic as per definition?
