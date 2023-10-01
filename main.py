@@ -6,7 +6,6 @@ import torch
 import transformers
 
 
-transformers.logging.set_verbosity_error()
 num_topics = 49
 num_sentiments = 2
 num_irrelevant = 1
@@ -21,6 +20,7 @@ optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
 loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
 batch_size = 4
 epochs = 10
+random.seed(42)
 
 
 def _is_balanced(label_count, threshhold):
@@ -31,7 +31,6 @@ def _is_balanced(label_count, threshhold):
 
 
 def _balance_dataset():
-	random.seed(42)
 	threshhold = 3500
 	label_count = [0 for _ in range(num_labels - 1)]
 	with database.connect() as con:
@@ -94,7 +93,7 @@ def _balance_dataset():
 					can_insert = False
 					break
 				final_rows.append((sentence, label_id))
-			if can_insert:
+			if can_insert and final_rows:
 				content = []
 				label = []
 				len_content = 0
@@ -124,8 +123,6 @@ def _balance_dataset():
 		con.commit()
 
 
-
-
 def _dataset():
 	with database.connect() as con:
 		dataset = []
@@ -133,6 +130,7 @@ def _dataset():
 		cur.execute("SELECT content, label FROM train")
 		for content, label in cur.fetchall():
 			dataset.append((content, json.loads(label)))
+		random.shuffle(dataset)
 		return dataset
 
 
@@ -158,7 +156,7 @@ class Dataset(torch.utils.data.Dataset):
 
 def train():
 	dataset = _dataset()
-	train_eval_split = 100000
+	train_eval_split = 102000
 	train_dataloader = torch.utils.data.DataLoader(Dataset(dataset[:train_eval_split]), batch_size=batch_size)
 	eval_dataloader = torch.utils.data.DataLoader(Dataset(dataset[train_eval_split:]), batch_size=batch_size)
 
@@ -211,14 +209,13 @@ def train():
 
 
 def test():
-	for epoch in range(epochs):
+	for epoch in range(5):
 		cp = torch.load(f"{epoch}.model")
 		print(f"train_avg_loss: {cp['train_avg_loss']}")
 		print(f"eval_avg_loss: {cp['eval_avg_loss']}")
-		print(f"eval_accuracy: {cp['eval_accuray']}")
+		print(f"eval_accuracy: {cp['eval_accuracy']}")
 		print("-------------------------")
 
 
-
 if __name__ == "__main__":
-	_balance_dataset()
+	train()
