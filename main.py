@@ -3,24 +3,24 @@ import random
 import json
 import numpy
 import torch
-#import transformers
+import transformers
 
 
-#transformers.logging.set_verbosity_error()
+transformers.logging.set_verbosity_error()
 num_topics = 49
 num_sentiments = 2
 num_irrelevant = 1
-#device = torch.device("cuda")
+device = torch.device("cuda")
 num_labels = num_topics * num_sentiments + num_irrelevant
-#tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
-#additional_special_tokens = ["[ENT]"]
-#tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
-#model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
-#model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
-#optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
-#loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
-#batch_size = 4
-#epochs = 10
+tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+additional_special_tokens = ["[ENT]"]
+tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
+model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
+model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
+optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
+loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
+batch_size = 4
+epochs = 10
 
 
 def _is_balanced(label_count, threshhold):
@@ -31,7 +31,7 @@ def _is_balanced(label_count, threshhold):
 
 
 def _balance_dataset():
-	#random.seed(42)
+	random.seed(42)
 	threshhold = 3500
 	label_count = [0 for _ in range(num_labels - 1)]
 	with database.connect() as con:
@@ -45,6 +45,35 @@ def _balance_dataset():
 		cur.execute("SELECT id FROM topics")
 		all_topics = cur.fetchall()
 		num_all_topics = len(all_topics)
+
+		irrelevant_count = 0
+		cur.execute("SELECT sentence_id, entity, start_pos, end_pos FROM sentence_entity")
+		for sentence_id, entity, start_pos, end_pos in cur.fetchall():
+			print(irrelevant_count)
+			if irrelevant_count == threshhold:
+				break
+			cur.execute("SELECT 1 FROM irrelevant_entities WHERE sentence_id = ? AND entity = ?", (sentence_id, entity))
+			if cur.fetchone() is not None:
+				irrelevant_count = irrelevant_count + 1
+				content = []
+				cur.execute("SELECT content FROM sentences WHERE id = ?", (sentence_id, ))
+				irrelevant_sentence, = cur.fetchone()
+				len_content = len(irrelevant_sentence)
+				irrelevant_sentence = irrelevant_sentence[:start_pos] + "[ENT] " + entity + " [ENT]" + irrelevant_sentence[end_pos:]
+				content.append(irrelevant_sentence)
+				random_sentence_indexes = random.sample(range(0, num_all_sentences), 10000)
+				for index in random_sentence_indexes:
+					_, _, _, random_sent = all_sentences[index]
+					if len_content > 2400:
+						break
+					if entity in random_sent:
+						continue
+					len_content = len_content + len(random_sent)
+					content.append(random_sent)
+				random.shuffle(content)
+				content = " ".join(content)
+				label = [98]
+				cur.execute("INSERT INTO train VALUES(?,?)", (content, json.dumps(label)))
 
 		while not _is_balanced(label_count, threshhold):
 			can_insert = True
@@ -88,10 +117,11 @@ def _balance_dataset():
 						continue
 					len_content = len_content + len(sentence)
 					content.append(sentence)
+				print(label_count)
 				random.shuffle(content)
 				content = " ".join(content)
 				cur.execute("INSERT INTO train VALUES(?,?)", (content, json.dumps(label)))
-
+		con.commit()
 
 
 

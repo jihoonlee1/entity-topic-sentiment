@@ -22,10 +22,15 @@ def ask(input_queue, output_queue):
 	time.sleep(random.randint(0, 400))
 	while True:
 		sentence_id, entity, start_pos, end_pos, content, topic_name, sentiment = input_queue.get()
+		temp = "positivity"
+		if sentiment == "positive":
+			temp = "positivity"
+		elif sentiment == "negative":
+			temp = "negativity"
 		question = f"""
 Sentence: {content}
 
-The given sentence conveys a {sentiment} aspect related to {topic_name}. Is the reason for this negativity attributed to {entity}? If yes, say [[Yes]]. If no, say [[No]].
+The given sentence conveys a {sentiment} aspect related to "{topic_name}". Is the reason for this {temp} attributed to "{entity}"? If yes, say [[Yes]]. If no, say [[No]].
 """
 		try:
 			conv = bingchat.conversation()
@@ -40,20 +45,20 @@ def main():
 	with database.connect() as con:
 		temp = []
 		cur = con.cursor()
-		cur.execute("SELECT sentence_id, entity, start_pos, end_pos FROM sentence_entity")
-		for sentence_id, entity, start_pos, end_pos in cur.fetchall():
-			cur.execute("SELECT 1 FROM temp1 WHERE sentence_id = ? AND entity = ? AND start_pos = ? AND end_pos = ?", (sentence_id, entity, start_pos, end_pos))
+		cur.execute("SELECT * FROM sentence_entity")
+		for sent_id, entity, start_pos, end_pos in cur.fetchall():
+			cur.execute("SELECT topic_id, sentiment, content FROM sentences WHERE id = ?", (sent_id, ))
+			topic_id, sentiment, content = cur.fetchone()
+			cur.execute("SELECT name FROM topics WHERE id = ?", (topic_id, ))
+			topic_name, = cur.fetchone()
+			sentiment_str = "positive"
+			if sentiment == 0:
+				sentiment_str = "positive"
+			elif sentiment == 1:
+				sentiment_str = "negative"
+			cur.execute("SELECT 1 FROM temp1 WHERE sentence_id = ? AND entity = ?", (sent_id, entity))
 			if cur.fetchone() is None:
-				cur.execute("SELECT topic_id, sentiment, content FROM sentences WHERE id = ?", (sentence_id, ))
-				topic_id, sentiment_id, content = cur.fetchone()
-				cur.execute("SELECT name FROM topics WHERE id = ?", (topic_id, ))
-				topic_name, = cur.fetchone()
-				sentiment = "positive"
-				if sentiment_id == 0:
-					sentiment = "positive"
-				elif sentiment_id == 1:
-					sentiment = "negative"
-				temp.append((sentence_id, entity, start_pos, end_pos, content, topic_name, sentiment))
+				temp.append((sent_id, entity, start_pos, end_pos, content, topic_name, sentiment_str))
 
 		num_questions = len(temp)
 		input_queue = queue.Queue()
