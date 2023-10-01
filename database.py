@@ -36,12 +36,39 @@ CREATE TABLE IF NOT EXISTS sentences(
 )
 """,
 """
+CREATE INDEX IF NOT EXISTS sentences_index0 ON sentences(entity_id, topic_id)
+""",
+"""
 CREATE TABLE IF NOT EXISTS sentence_entity(
 	sentence_id INTEGER NOT NULL,
 	entity TEXT NOT NULL,
 	start_pos INTEGER NOT NULL,
 	end_pos INTEGER NOT NULL,
 	PRIMARY KEY(sentence_id, entity)
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS temp1(
+	sentence_id INTEGER NOT NULL,
+	entity TEXT NOT NULL,
+	start_pos INTEGER NOT NULL,
+	end_pos INTEGER NOT NULL,
+	response TEXT NOT NULL
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS irrelevant_entities(
+	sentence_id INTEGER NOT NULL,
+	entity TEXT NOT NULL,
+	start_pos INTEGER NOT NULL,
+	end_pos INTEGER NOT NULL,
+	PRIMARY KEY(sentence_id, entity)
+)
+""",
+"""
+CREATE TABLE IF NOT EXISTS train(
+	content TEXT NOT NULL,
+	label TEXT NOT NULL
 )
 """
 ]

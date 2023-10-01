@@ -14,6 +14,7 @@ with database.connect() as con:
 	sentences = cur.fetchall()
 	num_sentences = len(sentences)
 	for idx, (sent_id, content) in enumerate(sentences):
+		if "according to" in content.lower()
 		print(f"{idx}/{num_sentences}")
 		sentence = flair.data.Sentence(content)
 		tagger.predict(sentence)

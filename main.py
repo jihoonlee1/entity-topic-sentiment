@@ -3,94 +3,97 @@ import random
 import json
 import numpy
 import torch
-import transformers
+#import transformers
 
 
-transformers.logging.set_verbosity_error()
+#transformers.logging.set_verbosity_error()
 num_topics = 49
 num_sentiments = 2
-device = torch.device("cuda")
-num_labels = num_topics * num_sentiments
-tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
-additional_special_tokens = ["[ENT]"]
-tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
-model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
-model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
-optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
-loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
-batch_size = 4
-epochs = 10
+num_irrelevant = 1
+#device = torch.device("cuda")
+num_labels = num_topics * num_sentiments + num_irrelevant
+#tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+#additional_special_tokens = ["[ENT]"]
+#tokenizer.add_special_tokens({"additional_special_tokens": additional_special_tokens})
+#model = transformers.BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=num_labels).to(device)
+#model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=8)
+#optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
+#loss_fn = torch.nn.BCEWithLogitsLoss().to(device)
+#batch_size = 4
+#epochs = 10
 
 
 def _is_balanced(label_count, threshhold):
-	for _, val in label_count.items():
-		if val != threshhold:
+	for count in label_count:
+		if count != threshhold:
 			return False
 	return True
 
 
 def _balance_dataset():
-	random.seed(0) # 770498
+	#random.seed(42)
 	threshhold = 3500
-	label_count = {}
-	for i in range(num_labels):
-		label_count[i] = 0
+	label_count = [0 for _ in range(num_labels - 1)]
 	with database.connect() as con:
 		cur = con.cursor()
 		cur.execute("SELECT topic_id, entity_id, sentiment, content FROM sentences")
 		all_sentences = cur.fetchall()
 		num_all_sentences = len(all_sentences)
-		count = 0
+		cur.execute("SELECT id, name FROM entities")
+		all_entities = cur.fetchall()
+		num_all_entities = len(all_entities)
+		cur.execute("SELECT id FROM topics")
+		all_topics = cur.fetchall()
+		num_all_topics = len(all_topics)
+
 		while not _is_balanced(label_count, threshhold):
-			print(count)
-			count = count + 1
-			chosen_sent_idx = random.randint(0, num_all_sentences-1)
-			chosen_topic_id, chosen_entity_id, chosen_sentiment, chosen_content = all_sentences[chosen_sent_idx]
-			chosen_label_id = (chosen_topic_id * num_sentiments) + chosen_sentiment
-			if label_count[chosen_label_id] == threshhold:
-				continue
-			cur.execute("SELECT topic_id, entity_id, sentiment, content FROM sentences WHERE entity_id = ? AND topic_id != ?", (chosen_entity_id, chosen_topic_id))
-			same_entity_sentences = cur.fetchall()
-			num_same_entity_sentences = random.randint(0, 5)
-			same_entity_sentence_indexes = random.sample(range(0, len(same_entity_sentences)-1), num_same_entity_sentences)
 			can_insert = True
-			for index in same_entity_sentence_indexes:
-				same_entity_topic_id, _, same_entity_sentiment, same_entity_content = same_entity_sentences[index]
-				sane_entity_label_id = (same_entity_topic_id * num_sentiments) + same_entity_sentiment
-				if label_count[sane_entity_label_id] == threshhold:
+			chosen_entity_id, chosen_entity_name = all_entities[random.randint(0, num_all_entities-1)]
+			num_relevant_sentences = random.randint(1, 6)
+			topic_indexes = random.sample(range(0, num_all_topics), num_relevant_sentences)
+			final_rows = []
+			for index in topic_indexes:
+				topic_id, = all_topics[index]
+				cur.execute("SELECT sentiment, content FROM sentences WHERE entity_id = ? AND topic_id = ?", (chosen_entity_id, topic_id))
+				rows = cur.fetchall()
+				if not rows:
+					continue
+				num_rows = len(rows)
+				sentiment, sentence = rows[random.randint(0, num_rows-1)]
+				label_id = (topic_id * num_sentiments) + sentiment
+				if label_count[label_id] == threshhold:
 					can_insert = False
 					break
+				final_rows.append((sentence, label_id))
 			if can_insert:
-				contents = []
+				content = []
 				label = []
-				len_content = len(chosen_content)
-				label_count[chosen_label_id] = label_count[chosen_label_id] + 1
-				label.append(chosen_label_id)
-				cur.execute("SELECT name FROM entities WHERE id = ?", (chosen_entity_id, ))
-				chosen_entity_name, = cur.fetchone()
-				chosen_content_replaced = chosen_content.replace(chosen_entity_name, f"[ENT] {chosen_entity_name} [ENT]", 1)
-				contents.append(chosen_content_replaced)
-				for index in same_entity_sentence_indexes:
-					same_entity_topic_id, _, same_entity_sentiment, same_entity_content = same_entity_sentences[index]
-					same_entity_label_id = (same_entity_topic_id * num_sentiments) + same_entity_sentiment
-					label_count[same_entity_label_id] = label_count[same_entity_label_id] + 1
-					len_content = len_content + len(same_entity_content)
-					label.append(same_entity_label_id)
-					contents.append(same_entity_content)
-				cur.execute("SELECT count(*) FROM sentences WHERE entity_id = ?", (chosen_entity_id, ))
-				num_chosen_entity_sentences, = cur.fetchone()
-				max_offset = num_all_sentences - num_chosen_entity_sentences
-				random_offsets = random.sample(range(0, max_offset), 30)
-				for offset in random_offsets:
+				len_content = 0
+				for idx, (sentence, label_id) in enumerate(final_rows):
+					label_count[label_id] = label_count[label_id] + 1
+					len_content = len_content + len(sentence)
+					label.append(label_id)
+					if idx == 0:
+						sentence = sentence.replace(chosen_entity_name, f"[ENT] {chosen_entity_name} [ENT]", 1)
+					content.append(sentence)
+				random_sentence_indexes = random.sample(range(0, num_all_sentences), 10000)
+				temp = []
+				for index in random_sentence_indexes:
 					if len_content > 2400:
 						break
-					cur.execute("SELECT content FROM sentences WHERE entity_id != ? LIMIT 1 OFFSET ?", (chosen_entity_id, offset))
-					random_content, = cur.fetchone()
-					len_content = len_content + len(random_content)
-					contents.append(random_content)
-				random.shuffle(contents)
-				content = " ".join(contents)
+					topic_id, entity_id, sentiment, sentence = all_sentences[index]
+					if entity_id == chosen_entity_id:
+						continue
+					if topic_id in temp:
+						continue
+					len_content = len_content + len(sentence)
+					content.append(sentence)
+				random.shuffle(content)
+				content = " ".join(content)
 				cur.execute("INSERT INTO train VALUES(?,?)", (content, json.dumps(label)))
+
+
+
 
 
 def _dataset():
@@ -188,4 +191,4 @@ def test():
 
 
 if __name__ == "__main__":
-	train()
+	_balance_dataset()
